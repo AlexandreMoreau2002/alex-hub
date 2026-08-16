@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import styles from './login.module.css'
 
 export default function LoginPage() {
@@ -15,15 +16,11 @@ export default function LoginPage() {
     setSubmitting(true)
     setError(null)
 
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
+    const result = await signIn('credentials', { password, redirect: false })
 
     setSubmitting(false)
 
-    if (!response.ok) {
+    if (!result || result.error) {
       setError('Mot de passe incorrect')
       return
     }
@@ -35,13 +32,16 @@ export default function LoginPage() {
   return (
     <main className={styles.main}>
       <h1 className={styles.title}>Alex hub</h1>
+      <button type="button" onClick={() => signIn('github', { callbackUrl: '/' })} className={styles.github}>
+        Se connecter avec GitHub
+      </button>
+      <div className={styles.divider}>ou</div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <input
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Mot de passe"
-          autoFocus
           className={styles.input}
         />
         {error ? <p className={styles.error}>{error}</p> : null}
