@@ -1,22 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-import { isValidSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth'
+import { auth } from '@/auth'
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth).*)'],
 }
 
-const PUBLIC_PATHS = ['/login', '/api/login']
-
-export async function middleware(request: NextRequest) {
+export default auth((request) => {
   const { pathname } = request.nextUrl
 
-  if (PUBLIC_PATHS.some((path) => pathname === path)) {
+  if (pathname === '/login') {
     return NextResponse.next()
   }
 
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value
-  if (await isValidSessionToken(token)) {
+  if (request.auth) {
     return NextResponse.next()
   }
 
@@ -26,4 +23,4 @@ export async function middleware(request: NextRequest) {
 
   const loginUrl = new URL('/login', request.url)
   return NextResponse.redirect(loginUrl)
-}
+})
