@@ -1,0 +1,28 @@
+.up,
+.down {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.up {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.down {
+  background: var(--down-bg);
+  color: var(--down);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
