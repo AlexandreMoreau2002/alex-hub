@@ -15,6 +15,7 @@ const groups: SiteGroup[] = [
         favicon: null,
         latencyMs: 128,
         httpStatus: 200,
+        environment: 'prod',
       },
       {
         name: 'Docs',
@@ -25,6 +26,7 @@ const groups: SiteGroup[] = [
         favicon: null,
         latencyMs: null,
         httpStatus: 504,
+        environment: 'prod',
       },
     ],
   },
@@ -40,6 +42,7 @@ const groups: SiteGroup[] = [
         favicon: null,
         latencyMs: 96,
         httpStatus: 200,
+        environment: 'prod',
       },
     ],
   },

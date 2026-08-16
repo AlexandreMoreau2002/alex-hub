@@ -10,10 +10,21 @@ interface SiteGroupAccordionProps {
   onToggle: () => void
 }
 
+// Un nom de groupe peut contenir des espaces et un point médian (ex: "Snoroc · Dev"),
+// invalides dans un attribut `id` HTML — on le simplifie pour l'usage id/aria-controls.
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // retire les accents décomposés (é → e)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export function SiteGroupAccordion({ group, isOpen, onToggle }: SiteGroupAccordionProps) {
   const downCount = group.services.filter((service) => service.status === 'down').length
   const countLabel = `${group.services.length} ${group.services.length > 1 ? 'services' : 'service'}`
-  const bodyId = `group-body-${group.name}`
+  const bodyId = `group-body-${slugify(group.name)}`
 
   return (
     <section className={styles.card}>

@@ -1,3 +1,5 @@
+import type { EnvironmentLabel } from './environment'
+
 export interface DokployDomain {
   host: string
   https: boolean
@@ -26,6 +28,7 @@ export interface SiteEntry {
   favicon: string | null
   latencyMs: number | null
   httpStatus: number | null
+  environment: EnvironmentLabel
 }
 
 export interface SiteGroup {

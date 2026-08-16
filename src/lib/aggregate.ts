@@ -1,8 +1,12 @@
+import { detectEnvironment, formatEnvironmentLabel, type EnvironmentLabel } from './environment'
 import { fetchDokployProjects } from './dokploy'
 import { fetchSiteMetadata } from './metadata'
 import type { SiteEntry, SiteGroup, SitesResponse } from './types'
 
 const CACHE_TTL_MS = 60_000
+
+// Ordre d'affichage des environnements au sein d'un même projet Dokploy.
+const ENV_ORDER: EnvironmentLabel[] = ['prod', 'preprod', 'dev']
 
 let cache: { data: SitesResponse; expiresAt: number } | null = null
 
@@ -24,6 +28,29 @@ async function fetchSiteMetadataSafe(url: string) {
   }
 }
 
+// Un projet Dokploy peut regrouper plusieurs environnements réels (ex: Snoroc a des
+// domaines prod ET dev). On les scinde en groupes distincts d'après l'environnement
+// détecté depuis le sous-domaine (voir environment.ts) — le nom d'environnement Dokploy
+// lui-même n'est pas fiable (cf. Quest/Cloudbreak nommés "production" alors qu'ils
+// tournent en dev). Le groupe prod garde le nom du projet tel quel ; les autres
+// environnements reçoivent un suffixe (« Snoroc · Dev »).
+function groupByEnvironment(projectName: string, entries: SiteEntry[]): SiteGroup[] {
+  const byEnvironment = new Map<EnvironmentLabel, SiteEntry[]>()
+  for (const entry of entries) {
+    const bucket = byEnvironment.get(entry.environment)
+    if (bucket) {
+      bucket.push(entry)
+    } else {
+      byEnvironment.set(entry.environment, [entry])
+    }
+  }
+
+  return ENV_ORDER.filter((environment) => byEnvironment.has(environment)).map((environment) => ({
+    name: environment === 'prod' ? projectName : `${projectName} · ${formatEnvironmentLabel(environment)}`,
+    services: byEnvironment.get(environment) as SiteEntry[],
+  }))
+}
+
 export async function getSites(): Promise<SitesResponse> {
   if (cache && cache.expiresAt > Date.now()) {
     return cache.data
@@ -31,11 +58,11 @@ export async function getSites(): Promise<SitesResponse> {
 
   const projects = await fetchDokployProjects()
 
-  const groups: SiteGroup[] = await Promise.all(
+  const groupsPerProject = await Promise.all(
     projects
       .filter((project) => project.services.length > 0)
       .map(async (project) => {
-        const services = await Promise.all(
+        const entries = await Promise.all(
           project.services.flatMap((service) =>
             service.domains.map(async (domain) => {
               const url = `${domain.https ? 'https' : 'http'}://${domain.host}`
@@ -50,16 +77,18 @@ export async function getSites(): Promise<SitesResponse> {
                 favicon: metadata.favicon,
                 latencyMs: metadata.latencyMs,
                 httpStatus: metadata.httpStatus,
+                environment: detectEnvironment(domain.host),
               }
               return entry
             })
           )
         )
-        return { name: project.name, services }
+
+        return groupByEnvironment(project.name, entries)
       })
   )
 
-  const data: SitesResponse = { groups: groups.filter((group) => group.services.length > 0) }
+  const data: SitesResponse = { groups: groupsPerProject.flat() }
   cache = { data, expiresAt: Date.now() + CACHE_TTL_MS }
   return data
 }

@@ -54,11 +54,43 @@ it('groups services by project and merges metadata including latency', async () 
             favicon: 'https://snoroc.fr/favicon.ico',
             latencyMs: 128,
             httpStatus: 200,
+            environment: 'prod',
           },
         ],
       },
     ],
   })
+})
+
+it('splits a project into separate prod/dev groups based on the domain, not the Dokploy environment name', async () => {
+  vi.mocked(fetchDokployProjects).mockResolvedValue([
+    {
+      projectId: 'p1',
+      name: 'Snoroc',
+      services: [
+        { serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] },
+        { serviceId: 'a2', name: 'Back Prod', domains: [{ host: 'api.snoroc.fr', https: true }] },
+        { serviceId: 'a3', name: 'Front Dev', domains: [{ host: 'dev.snoroc.fr', https: true }] },
+        { serviceId: 'a4', name: 'Back Dev', domains: [{ host: 'dev-api.snoroc.fr', https: true }] },
+      ],
+    },
+  ])
+  vi.mocked(fetchSiteMetadata).mockResolvedValue({
+    status: 'up',
+    httpStatus: 200,
+    latencyMs: 50,
+    title: null,
+    description: null,
+    favicon: null,
+  })
+
+  const result = await getSites()
+
+  expect(result.groups.map((group) => group.name)).toEqual(['Snoroc', 'Snoroc · Dev'])
+  expect(result.groups[0].services.map((service) => service.name)).toEqual(['Front Prod', 'Back Prod'])
+  expect(result.groups[0].services.every((service) => service.environment === 'prod')).toBe(true)
+  expect(result.groups[1].services.map((service) => service.name)).toEqual(['Front Dev', 'Back Dev'])
+  expect(result.groups[1].services.every((service) => service.environment === 'dev')).toBe(true)
 })
 
 it('keeps a degraded entry when a metadata fetch throws unexpectedly, without affecting other sites', async () => {
@@ -89,6 +121,7 @@ it('keeps a degraded entry when a metadata fetch throws unexpectedly, without af
       favicon: null,
       latencyMs: 61,
       httpStatus: 200,
+      environment: 'prod',
     },
     {
       name: 'Back Prod',
@@ -99,6 +132,7 @@ it('keeps a degraded entry when a metadata fetch throws unexpectedly, without af
       favicon: null,
       latencyMs: null,
       httpStatus: null,
+      environment: 'prod',
     },
   ])
 })
