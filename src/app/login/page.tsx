@@ -1,9 +1,26 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, type FormEvent } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import styles from './login.module.css'
+
+// Message affiché quand Auth.js redirige vers /login?error=... — notamment le cas où
+// GitHub a authentifié la personne, mais que ce n'est pas le compte autorisé
+// (ALLOWED_GITHUB_USERNAME), ou que l'OAuth App est mal configurée côté serveur.
+function githubErrorMessage(error: string | null): string | null {
+  if (!error) return null
+  if (error === 'AccessDenied') {
+    return "Ce compte GitHub n'est pas autorisé à accéder à Alex Hub."
+  }
+  return 'Connexion GitHub impossible. Réessaie ou utilise le mot de passe.'
+}
+
+function GithubErrorBanner() {
+  const searchParams = useSearchParams()
+  const message = githubErrorMessage(searchParams.get('error'))
+  return message ? <p className={styles.error}>{message}</p> : null
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -32,6 +49,9 @@ export default function LoginPage() {
   return (
     <main className={styles.main}>
       <h1 className={styles.title}>Alex hub</h1>
+      <Suspense fallback={null}>
+        <GithubErrorBanner />
+      </Suspense>
       <button type="button" onClick={() => signIn('github', { callbackUrl: '/' })} className={styles.github}>
         Se connecter avec GitHub
       </button>
