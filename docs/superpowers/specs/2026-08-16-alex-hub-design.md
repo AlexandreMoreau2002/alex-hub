@@ -122,4 +122,5 @@ Dossier local : `~/Desktop/dev/alex-hub`
 Stack : Next.js (App Router, API routes + front dans le même projet)
 Déploiement : Dokploy, comme les autres projets du VPS OVH (voir `.agent/infra.md` de snoroc
 pour les conventions d'infra communes : credentials jamais en dur, variables d'env côté
-Dokploy, domaine à configurer au déploiement).
+Dokploy). Pas de domaine personnel réservé pour ce projet : sous-domaine `nip.io` généré
+automatiquement par Dokploy (ex: `alex-hub-<ip>.sslip.nip.io`), pas d'achat de domaine.
