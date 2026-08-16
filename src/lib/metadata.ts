@@ -20,7 +20,11 @@ export async function fetchSiteMetadata(url: string): Promise<SiteMetadata> {
     const response = await fetch(url, { signal: controller.signal, redirect: 'follow' })
     const latencyMs = Date.now() - startedAt
     const httpStatus = response.status
-    const status: SiteStatusCode = response.ok ? 'up' : 'down'
+    // "up" = le serveur a répondu, y compris en 4xx : une API sans route racine
+    // (FastAPI, NestJS...) renvoie légitimement 404 sur `/` tout en étant parfaitement
+    // fonctionnelle. Seule une vraie panne réseau (catch ci-dessous) ou une erreur
+    // serveur (5xx) compte comme "down".
+    const status: SiteStatusCode = httpStatus < 500 ? 'up' : 'down'
 
     if (!response.ok) {
       return { status, httpStatus, latencyMs, title: null, description: null, favicon: null }

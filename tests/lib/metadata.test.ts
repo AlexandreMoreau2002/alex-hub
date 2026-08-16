@@ -97,7 +97,7 @@ describe('fetchSiteMetadata', () => {
     })
   })
 
-  it('returns a down status with the http code and latency when the response is not ok', async () => {
+  it('returns a down status with the http code and latency when the response is a 5xx server error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503, text: async () => '' }))
 
     const result = await fetchSiteMetadata('https://slow-site.fr')
@@ -105,6 +105,21 @@ describe('fetchSiteMetadata', () => {
     expect(result).toEqual({
       status: 'down',
       httpStatus: 503,
+      latencyMs: 0,
+      title: null,
+      description: null,
+      favicon: null,
+    })
+  })
+
+  it('returns an up status for a 4xx response — the server responded, it just has no root route (common for API-only backends)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, text: async () => '' }))
+
+    const result = await fetchSiteMetadata('https://api.example.com')
+
+    expect(result).toEqual({
+      status: 'up',
+      httpStatus: 404,
       latencyMs: 0,
       title: null,
       description: null,
