@@ -1,0 +1,20 @@
+### Variables
+@baseUrl = http://localhost:3000
+@password = {{$dotenv ALEX_HUB_PASSWORD}}
+
+### 1. Login — pose le cookie de session
+# @name login
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "password": "{{password}}"
+}
+
+### 2. Liste des sites (nécessite le cookie posé par la requête #1)
+GET {{baseUrl}}/api/sites
+Cookie: alex_hub_session={{login.response.headers.Set-Cookie}}
+
+### 3. Logout — supprime le cookie de session
+POST {{baseUrl}}/api/logout
+Cookie: alex_hub_session={{login.response.headers.Set-Cookie}}
