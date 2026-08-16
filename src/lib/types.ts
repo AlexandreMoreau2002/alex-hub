@@ -24,6 +24,8 @@ export interface SiteEntry {
   title: string
   description: string | null
   favicon: string | null
+  latencyMs: number | null
+  httpStatus: number | null
 }
 
 export interface SiteGroup {

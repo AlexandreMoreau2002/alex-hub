@@ -21,7 +21,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-it('groups services by project and merges metadata', async () => {
+it('groups services by project and merges metadata including latency', async () => {
   vi.mocked(fetchDokployProjects).mockResolvedValue([
     {
       projectId: 'p1',
@@ -32,6 +32,7 @@ it('groups services by project and merges metadata', async () => {
   vi.mocked(fetchSiteMetadata).mockResolvedValue({
     status: 'up',
     httpStatus: 200,
+    latencyMs: 128,
     title: 'Snoroc',
     description: 'Desc',
     favicon: 'https://snoroc.fr/favicon.ico',
@@ -51,6 +52,8 @@ it('groups services by project and merges metadata', async () => {
             title: 'Snoroc',
             description: 'Desc',
             favicon: 'https://snoroc.fr/favicon.ico',
+            latencyMs: 128,
+            httpStatus: 200,
           },
         ],
       },
@@ -71,14 +74,32 @@ it('keeps a degraded entry when a metadata fetch throws unexpectedly, without af
   ])
   vi.mocked(fetchSiteMetadata).mockImplementation(async (url: string) => {
     if (url.includes('api.')) throw new Error('boom')
-    return { status: 'up', httpStatus: 200, title: 'Snoroc', description: null, favicon: null }
+    return { status: 'up', httpStatus: 200, latencyMs: 61, title: 'Snoroc', description: null, favicon: null }
   })
 
   const result = await getSites()
 
   expect(result.groups[0].services).toEqual([
-    { name: 'Front Prod', url: 'https://snoroc.fr', status: 'up', title: 'Snoroc', description: null, favicon: null },
-    { name: 'Back Prod', url: 'https://api.snoroc.fr', status: 'down', title: 'Back Prod', description: null, favicon: null },
+    {
+      name: 'Front Prod',
+      url: 'https://snoroc.fr',
+      status: 'up',
+      title: 'Snoroc',
+      description: null,
+      favicon: null,
+      latencyMs: 61,
+      httpStatus: 200,
+    },
+    {
+      name: 'Back Prod',
+      url: 'https://api.snoroc.fr',
+      status: 'down',
+      title: 'Back Prod',
+      description: null,
+      favicon: null,
+      latencyMs: null,
+      httpStatus: null,
+    },
   ])
 })
 

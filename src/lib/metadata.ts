@@ -3,6 +3,7 @@ import type { SiteStatusCode } from './types'
 export interface SiteMetadata {
   status: SiteStatusCode
   httpStatus: number | null
+  latencyMs: number | null
   title: string | null
   description: string | null
   favicon: string | null
@@ -13,26 +14,29 @@ const FETCH_TIMEOUT_MS = 3000
 export async function fetchSiteMetadata(url: string): Promise<SiteMetadata> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const startedAt = Date.now()
 
   try {
     const response = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+    const latencyMs = Date.now() - startedAt
     const httpStatus = response.status
     const status: SiteStatusCode = response.ok ? 'up' : 'down'
 
     if (!response.ok) {
-      return { status, httpStatus, title: null, description: null, favicon: null }
+      return { status, httpStatus, latencyMs, title: null, description: null, favicon: null }
     }
 
     const html = await response.text()
     return {
       status,
       httpStatus,
+      latencyMs,
       title: extractTitle(html),
       description: extractDescription(html),
       favicon: resolveFavicon(url, extractFavicon(html)),
     }
   } catch {
-    return { status: 'down', httpStatus: null, title: null, description: null, favicon: null }
+    return { status: 'down', httpStatus: null, latencyMs: null, title: null, description: null, favicon: null }
   } finally {
     clearTimeout(timeout)
   }

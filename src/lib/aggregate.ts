@@ -13,7 +13,14 @@ async function fetchSiteMetadataSafe(url: string) {
     // fetchSiteMetadata already catches network/timeout errors internally; this is a
     // last-resort guard so an unexpected exception on one site never rejects the
     // Promise.all below and blocks the rest of the group.
-    return { status: 'down' as const, httpStatus: null, title: null, description: null, favicon: null }
+    return {
+      status: 'down' as const,
+      httpStatus: null,
+      latencyMs: null,
+      title: null,
+      description: null,
+      favicon: null,
+    }
   }
 }
 
@@ -41,6 +48,8 @@ export async function getSites(): Promise<SitesResponse> {
                 title: metadata.title ?? service.name,
                 description: metadata.description,
                 favicon: metadata.favicon,
+                latencyMs: metadata.latencyMs,
+                httpStatus: metadata.httpStatus,
               }
               return entry
             })

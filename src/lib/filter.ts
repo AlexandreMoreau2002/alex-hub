@@ -20,3 +20,13 @@ export function filterGroups(groups: SiteGroup[], query: string): SiteGroup[] {
     })
     .filter((group) => group.services.length > 0)
 }
+
+export type StatusFilterValue = 'all' | 'up' | 'down'
+
+export function filterByStatus(groups: SiteGroup[], filter: StatusFilterValue): SiteGroup[] {
+  if (filter === 'all') return groups
+
+  return groups
+    .map((group) => ({ ...group, services: group.services.filter((service) => service.status === filter) }))
+    .filter((group) => group.services.length > 0)
+}

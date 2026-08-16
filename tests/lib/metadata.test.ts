@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   extractDescription,
   extractFavicon,
@@ -8,9 +7,14 @@ import {
   resolveFavicon,
 } from '@/lib/metadata'
 
+beforeEach(() => {
+  vi.useFakeTimers().setSystemTime(new Date('2026-08-16T10:00:00Z'))
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('extractTitle', () => {
@@ -45,7 +49,7 @@ describe('extractFavicon / resolveFavicon', () => {
 })
 
 describe('fetchSiteMetadata', () => {
-  it('returns parsed metadata for a successful response', async () => {
+  it('returns parsed metadata with latency for a successful response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -61,6 +65,7 @@ describe('fetchSiteMetadata', () => {
     expect(result).toEqual({
       status: 'up',
       httpStatus: 200,
+      latencyMs: 0,
       title: 'Snoroc',
       description: 'Desc',
       favicon: 'https://snoroc.fr/favicon.png',
@@ -72,14 +77,28 @@ describe('fetchSiteMetadata', () => {
 
     const result = await fetchSiteMetadata('https://dead-site.fr')
 
-    expect(result).toEqual({ status: 'down', httpStatus: null, title: null, description: null, favicon: null })
+    expect(result).toEqual({
+      status: 'down',
+      httpStatus: null,
+      latencyMs: null,
+      title: null,
+      description: null,
+      favicon: null,
+    })
   })
 
-  it('returns a down status with the http code when the response is not ok', async () => {
+  it('returns a down status with the http code and latency when the response is not ok', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503, text: async () => '' }))
 
     const result = await fetchSiteMetadata('https://slow-site.fr')
 
-    expect(result).toEqual({ status: 'down', httpStatus: 503, title: null, description: null, favicon: null })
+    expect(result).toEqual({
+      status: 'down',
+      httpStatus: 503,
+      latencyMs: 0,
+      title: null,
+      description: null,
+      favicon: null,
+    })
   })
 })
