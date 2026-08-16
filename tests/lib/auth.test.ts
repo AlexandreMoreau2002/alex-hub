@@ -1,15 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { checkPassword, isAllowedGithubUser } from '@/lib/auth'
 
 const ORIGINAL_ENV = process.env
 
 beforeEach(() => {
-  process.env = { ...ORIGINAL_ENV, ALEX_HUB_PASSWORD: 'correct-horse', ALEX_HUB_SESSION_SECRET: 'super-secret' }
+  process.env = { ...ORIGINAL_ENV, ALEX_HUB_PASSWORD: 'correct-horse' }
 })
 
 afterEach(() => {
   process.env = ORIGINAL_ENV
-  vi.useRealTimers()
 })
 
 describe('checkPassword', () => {
