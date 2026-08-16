@@ -115,6 +115,44 @@ générique, pas de lockout (outil perso, faible surface d'attaque).
   manuelle parallèle à maintenir).
 - Pas de webhook Dokploy pour rafraîchir en push — le fetch au chargement de page suffit.
 
+## Addendum — maquette haute-fidélité (2026-08-16)
+
+Alexandre a fourni une maquette haute-fidélité (`~/Downloads/design_handoff_alex_hub/`, prototype
+HTML + design system "Personal Brand · Cloudbreak") qui remplace la description visuelle générique
+donnée plus haut. Source de vérité pour toute la partie UI (Tâches 9+ du plan) :
+
+- **Design system** : tokens dans `_ds/.../colors_and_type.css` — palette chaude (linen/soft
+  oak/warm umber/deep anthracite), light + dark via `[data-theme]`, polices Josefin Sans (display),
+  Inter (corps), JetBrains Mono (urls/latences/compteurs) auto-hébergées (copiées dans
+  `public/fonts/`), rayons 8/11/14/22/999, easing `cubic-bezier(0.22,0.61,0.36,1)`.
+- **Écran unique** : header (eyebrow + titre "Alex hub" + compteur up/total + boutons
+  Rafraîchir/Thème) → barre d'outils (recherche live + filtre segmenté Tous/En ligne/Hors ligne +
+  bouton Tout déplier/replier) → bannière d'erreur (si erreur, au-dessus de la liste, données
+  potentiellement obsolètes affichées derrière) → skeleton (3 cartes, shimmer, jamais de spinner)
+  **ou** liste de groupes accordéon → footnote.
+- **Ligne de service** : favicon (placeholder = initiale, remplacé par le vrai favicon avec
+  fallback `onError`), titre + description tronqués, badge de statut (`up · 128 ms` ou
+  `down · 504`/`timeout`), lien url (host seul + icône external-link).
+- **Accordéon** : chevron rotatif, transition `grid-template-rows` 240ms, auto-expand des groupes
+  ayant des résultats dès qu'une recherche/filtre est actif (état manuel restauré à la recherche
+  vidée), body du plan initial (3 premiers groupes ouverts) remplacé par : tous ouverts par défaut
+  (adapté selon le nombre réel de groupes Dokploy).
+- **Accessibilité** : `aria-expanded`/`aria-controls` sur l'en-tête d'accordéon, focus visible,
+  `prefers-reduced-motion` désactive les transitions.
+
+**Deux écarts assumés par rapport aux données d'exemple de la maquette** (tranchés avec
+Alexandre le 2026-08-16) :
+
+1. **Pas de badge "environnement/hébergeur"** (la maquette affiche `prod · vercel`,
+   `staging · raspberry` — données fictives). Chez Alexandre tout tourne sur un seul VPS via
+   Dokploy, pas de notion d'hébergeur multiple par groupe : ce badge est retiré de l'en-tête de
+   groupe plutôt que d'afficher une valeur inventée.
+2. **Pas de polling automatique 60s**, malgré le texte "statut vérifié toutes les 60 s" du footer
+   de la maquette. Décision déjà actée plus tôt dans ce document (fetch au chargement de page
+   uniquement) : conservée. Le bouton "Rafraîchir" reste manuel. Le texte du footnote est adapté
+   pour ne pas annoncer un comportement qui n'existe pas (pas de mention de polling, pas d'email
+   personnel deviné).
+
 ## Nom & emplacement
 
 Projet : **Alex Hub**
