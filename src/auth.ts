@@ -33,6 +33,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ account, profile }) {
+      // Allow-list explicite par provider plutôt qu'un `return true` par défaut : un futur
+      // provider ajouté à `providers` sans mise à jour de ce callback est refusé par défaut
+      // (fail-closed) plutôt qu'autorisé silencieusement.
       if (account?.provider === 'github') {
         try {
           return isAllowedGithubUser(profile?.login as string | undefined)
@@ -41,7 +44,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return false
         }
       }
-      return true
+      if (account?.provider === 'credentials') {
+        return true
+      }
+      return false
     },
   },
 })
