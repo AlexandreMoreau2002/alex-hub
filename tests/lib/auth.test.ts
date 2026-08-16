@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { checkPassword, createSessionToken, isValidSessionToken } from '@/lib/auth'
+import { checkPassword, isAllowedGithubUser } from '@/lib/auth'
 
 const ORIGINAL_ENV = process.env
 
@@ -22,27 +22,25 @@ describe('checkPassword', () => {
   })
 })
 
-describe('session tokens', () => {
-  it('creates a token that is valid immediately', async () => {
-    const token = await createSessionToken()
-    expect(await isValidSessionToken(token)).toBe(true)
+describe('isAllowedGithubUser', () => {
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV, ALLOWED_GITHUB_USERNAME: 'AlexandreMoreau2002' }
   })
 
-  it('rejects a tampered token', async () => {
-    const token = await createSessionToken()
-    const tampered = token.slice(0, -1) + (token.endsWith('0') ? '1' : '0')
-    expect(await isValidSessionToken(tampered)).toBe(false)
+  it('allows the configured username', () => {
+    expect(isAllowedGithubUser('AlexandreMoreau2002')).toBe(true)
   })
 
-  it('rejects an expired token', async () => {
-    vi.useFakeTimers().setSystemTime(new Date('2026-08-16T10:00:00Z'))
-    const token = await createSessionToken()
-    vi.setSystemTime(new Date('2026-08-23T10:00:01Z')) // 7 jours + 1s plus tard
-    expect(await isValidSessionToken(token)).toBe(false)
+  it('rejects any other username', () => {
+    expect(isAllowedGithubUser('someone-else')).toBe(false)
   })
 
-  it('rejects undefined/empty tokens', async () => {
-    expect(await isValidSessionToken(undefined)).toBe(false)
-    expect(await isValidSessionToken('')).toBe(false)
+  it('rejects an undefined login', () => {
+    expect(isAllowedGithubUser(undefined)).toBe(false)
+  })
+
+  it('throws if ALLOWED_GITHUB_USERNAME is not configured', () => {
+    process.env.ALLOWED_GITHUB_USERNAME = ''
+    expect(() => isAllowedGithubUser('AlexandreMoreau2002')).toThrow()
   })
 })
