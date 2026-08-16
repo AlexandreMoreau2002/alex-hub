@@ -46,6 +46,16 @@ describe('extractFavicon / resolveFavicon', () => {
   it('falls back to /favicon.ico when no link tag is present', () => {
     expect(resolveFavicon('https://snoroc.fr/', null)).toBe('https://snoroc.fr/favicon.ico')
   })
+
+  it('falls back to /favicon.ico when the scraped favicon uses a javascript: scheme', () => {
+    const favicon = extractFavicon('<link rel="icon" href="javascript:alert(1)">')
+    expect(resolveFavicon('https://snoroc.fr/', favicon)).toBe('https://snoroc.fr/favicon.ico')
+  })
+
+  it('falls back to /favicon.ico for other non-http(s) schemes (e.g. data:)', () => {
+    const favicon = extractFavicon('<link rel="icon" href="data:text/html,<script>alert(1)</script>">')
+    expect(resolveFavicon('https://snoroc.fr/', favicon)).toBe('https://snoroc.fr/favicon.ico')
+  })
 })
 
 describe('fetchSiteMetadata', () => {

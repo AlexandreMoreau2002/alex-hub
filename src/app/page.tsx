@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { Footnote } from '@/components/Footnote'
@@ -23,18 +23,23 @@ export default function HomePage() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<StatusFilterValue>('all')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const latestRequestId = useRef(0)
 
   async function load() {
+    const requestId = ++latestRequestId.current
     setPhase('loading')
     try {
       const response = await fetch('/api/sites')
+      if (requestId !== latestRequestId.current) return
       if (!response.ok) {
         const body = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        if (requestId !== latestRequestId.current) return
         setErrorMessage(body.error ?? 'Erreur inconnue')
         setPhase('error')
         return
       }
       const data = (await response.json()) as SitesResponse
+      if (requestId !== latestRequestId.current) return
       setGroups(data.groups)
       setOpenGroups((current) => {
         const next = { ...current }
@@ -45,6 +50,7 @@ export default function HomePage() {
       })
       setPhase('ready')
     } catch {
+      if (requestId !== latestRequestId.current) return
       setErrorMessage('Impossible de contacter le serveur')
       setPhase('error')
     }

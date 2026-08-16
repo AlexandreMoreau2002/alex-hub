@@ -61,13 +61,19 @@ export function extractFavicon(html: string): string | null {
   return match ? match[1].trim() : null
 }
 
+const ALLOWED_FAVICON_PROTOCOLS = new Set(['http:', 'https:'])
+
 export function resolveFavicon(pageUrl: string, favicon: string | null): string {
   try {
     const base = new URL(pageUrl)
     if (!favicon) {
       return new URL('/favicon.ico', base).toString()
     }
-    return new URL(favicon, base).toString()
+    const resolved = new URL(favicon, base)
+    if (!ALLOWED_FAVICON_PROTOCOLS.has(resolved.protocol)) {
+      return new URL('/favicon.ico', base).toString()
+    }
+    return resolved.toString()
   } catch {
     return '/favicon.ico'
   }
