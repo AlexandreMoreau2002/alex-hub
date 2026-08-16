@@ -5,12 +5,36 @@
 - Node.js 20+ installé
 - Un fichier `.env.local` à la racine du projet, rempli à partir de `.env.example` :
   - `DOKPLOY_API_URL` et `DOKPLOY_API_TOKEN` (valeurs réelles sur la page Notion "🖥️ Serveur OVH")
-  - `ALEX_HUB_PASSWORD` (choisis un mot de passe de test)
-  - `ALEX_HUB_SESSION_SECRET` (chaîne aléatoire longue, ex: `openssl rand -hex 32`)
+  - `AUTH_GITHUB_ID` et `AUTH_GITHUB_SECRET` (GitHub OAuth App — voir README.md, doit être créée
+    à la main sur https://github.com/settings/developers avant le Scénario 1)
+  - `AUTH_SECRET` (chaîne aléatoire longue, ex: `openssl rand -hex 32`)
+  - `ALLOWED_GITHUB_USERNAME` (le compte GitHub autorisé à se connecter via OAuth)
+  - `ALEX_HUB_PASSWORD` (choisis un mot de passe de test — sert de connexion de secours)
 - Dépendances installées : `npm install`
 - Serveur de dev lancé : `npm run dev` (accessible sur `http://localhost:3000`)
 
-## Scénario 1 — accès protégé par mot de passe
+**Note sur ce qui est vérifiable sans navigateur réel** : les scénarios ci-dessous supposent un
+navigateur interactif. Le Scénario 1 (GitHub) et son cas limite compte non-autorisé demandent un
+vrai compte GitHub et un consentement OAuth manuel — impossibles à scripter en `curl`/`.http`.
+Le Scénario 2 (mot de passe) peut, lui, être vérifié intégralement en ligne de commande avec
+`curl` (voir `http/alex-hub.http` pour le détail de la requête) — utile pour une vérification
+rapide sans ouvrir de navigateur.
+
+## Scénario 1 — connexion GitHub
+
+1. Ouvre `/login` en navigation privée.
+2. Clique sur "Se connecter avec GitHub".
+3. **Attendu** : redirection vers GitHub, autorisation de l'OAuth App, puis retour sur `/` déjà
+   connecté.
+4. Déconnecte-toi (si un bouton de déconnexion existe — sinon vide le cookie de session
+   manuellement pour le test), reconnecte-toi une seconde fois : doit fonctionner sans
+   re-demander l'autorisation GitHub (déjà accordée).
+5. **Cas limite — compte non autorisé** : si tu as un second compte GitHub de test, tente de te
+   connecter avec. **Attendu** : refusé, retour à `/login?error=AccessDenied`, message "Ce compte
+   GitHub n'est pas autorisé à accéder à Alex Hub." affiché — même si GitHub lui-même a validé
+   l'authentification (c'est `isAllowedGithubUser` qui bloque, pas GitHub).
+
+## Scénario 2 — accès protégé par mot de passe
 
 1. Ouvre `http://localhost:3000/` dans un navigateur en navigation privée.
 2. **Attendu** : redirection automatique vers `/login`, formulaire de mot de passe affiché.
@@ -19,7 +43,7 @@
 5. Saisis le bon mot de passe (`ALEX_HUB_PASSWORD`), valide.
 6. **Attendu** : redirection vers `/`, le dashboard se charge.
 
-## Scénario 2 — chargement du dashboard
+## Scénario 3 — chargement du dashboard
 
 1. Une fois connecté, observe le chargement de la page d'accueil.
 2. **Attendu** : un skeleton animé (shimmer, pas de spinner) s'affiche brièvement, puis les
@@ -34,7 +58,7 @@
 6. Vérifie le compteur en haut à droite (`X/Y up`) — doit correspondre au nombre réel de services
    en ligne / total.
 
-## Scénario 3 — recherche/filtre
+## Scénario 4 — recherche/filtre
 
 1. Tape le nom d'un projet (ex: "Snoroc") dans la barre de recherche.
 2. **Attendu** : seul le groupe correspondant reste affiché, automatiquement déplié.
@@ -47,7 +71,7 @@
 8. **Attendu** : tous les groupes reviennent, et l'état d'ouverture/fermeture que tu avais
    manuellement choisi avant la recherche est restauré (pas remis à zéro).
 
-## Scénario 4 — filtre de statut
+## Scénario 5 — filtre de statut
 
 1. Clique sur "En ligne" dans le filtre segmenté.
 2. **Attendu** : seuls les services `up` restent affichés, groupes sans service `up` disparaissent.
@@ -57,13 +81,13 @@
 5. Reclique sur "Tous" : tout revient.
 6. Combine recherche + filtre de statut : **attendu** — les deux se combinent (ET logique).
 
-## Scénario 5 — tout déplier / tout replier
+## Scénario 6 — tout déplier / tout replier
 
 1. Clique sur "Tout replier" (ou "Tout déplier" selon l'état courant) en haut de la barre
    d'outils.
 2. **Attendu** : tous les groupes changent d'état d'un coup, le libellé du bouton s'inverse.
 
-## Scénario 6 — thème clair/sombre
+## Scénario 7 — thème clair/sombre
 
 1. Clique sur le bouton de bascule de thème dans le header.
 2. **Attendu** : le fond et les textes basculent clair ↔ sombre sans rechargement de page, le
@@ -84,8 +108,12 @@
   s'affichent normalement (pas de blocage global).
 - **Favicon cassé** : si un site n'a pas de favicon ou que l'url de favicon renvoie une erreur,
   vérifie que l'initiale du titre s'affiche à la place (pas d'icône cassée du navigateur).
-- **Session expirée/logout** : appelle `POST /api/logout` (via `http/alex-hub.http`), puis
-  recharge `/`. **Attendu** : redirection vers `/login`.
+- **Session expirée/logout** : il n'y a pas de bouton de déconnexion dans l'UI ni de route
+  `/api/logout` (supprimée avec l'ancien système). Pour simuler une session expirée/déconnectée :
+  ouvre les devtools → Application/Storage → cookies, supprime le cookie de session Auth.js
+  (`authjs.session-token`, ou vérifie le nom exact reçu dans `Set-Cookie` lors d'une vraie
+  connexion — voir la note dans `http/alex-hub.http`), puis recharge `/`. **Attendu** :
+  redirection vers `/login`.
 - **Pas de polling auto** : laisse la page ouverte plus de 60 secondes sans interaction.
   **Attendu** : aucune requête réseau vers `/api/sites` ne part toute seule (vérifiable dans
   l'onglet Réseau des devtools) — seul un clic sur "Rafraîchir" ou un F5 en déclenche une
@@ -93,7 +121,9 @@
 
 ## Checklist finale
 
-- [ ] Accès sans mot de passe → redirigé vers `/login`
+- [ ] Accès sans session → redirigé vers `/login`
+- [ ] Connexion GitHub (compte autorisé) → accès au dashboard
+- [ ] Connexion GitHub (compte non autorisé, si testable) → refusé, message d'erreur sur `/login`
 - [ ] Mauvais mot de passe → message d'erreur, pas d'accès
 - [ ] Bon mot de passe → accès au dashboard
 - [ ] Groupes affichés par projet Dokploy, dépliables/repliables avec animation

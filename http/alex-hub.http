@@ -2,19 +2,38 @@
 @baseUrl = http://localhost:3000
 @password = {{$dotenv ALEX_HUB_PASSWORD}}
 
-### 1. Login — pose le cookie de session
-# @name login
-POST {{baseUrl}}/api/login
-Content-Type: application/json
+### 1. CSRF token (requis par Auth.js avant tout POST vers /api/auth/callback/*)
+# @name csrf
+GET {{baseUrl}}/api/auth/csrf
 
-{
-  "password": "{{password}}"
-}
+### 2. Connexion par mot de passe (provider Credentials) — pose le cookie de session
+# Le CSRF token doit être copié depuis la réponse de la requête #1 (`csrfToken` dans le JSON) ;
+# le REST Client de VS Code ne sait pas chaîner cookie + body extrait dans le même fichier ici,
+# donc colle-le à la main dans le champ ci-dessous une fois la requête #1 exécutée.
+# Vérifié manuellement (curl) le 2026-08-16 : cette requête fonctionne réellement et renvoie un
+# `Set-Cookie: authjs.session-token=...` en 302 vers `/`.
+POST {{baseUrl}}/api/auth/callback/credentials
+Content-Type: application/x-www-form-urlencoded
+Cookie: authjs.csrf-token=PASTE_CSRF_COOKIE_FROM_REQUEST_1_HERE
 
-### 2. Liste des sites (nécessite le cookie posé par la requête #1)
+csrfToken=PASTE_CSRF_TOKEN_FROM_REQUEST_1_JSON_HERE&password={{password}}&json=true
+
+### 3. Liste des sites (nécessite une session active)
+# Deux façons d'obtenir le cookie de session :
+# - après la requête #2 ci-dessus (mot de passe) : copie le `authjs.session-token` reçu dans son
+#   `Set-Cookie`
+# - après une connexion GitHub (impossible à scripter ici, OAuth exige un vrai navigateur) :
+#   connecte-toi via /login dans le navigateur, puis copie le cookie `authjs.session-token`
+#   depuis les devtools (Application/Storage → Cookies)
 GET {{baseUrl}}/api/sites
-Cookie: alex_hub_session={{login.response.headers.Set-Cookie}}
+Cookie: authjs.session-token=PASTE_YOUR_SESSION_COOKIE_HERE
 
-### 3. Logout — supprime le cookie de session
-POST {{baseUrl}}/api/logout
-Cookie: alex_hub_session={{login.response.headers.Set-Cookie}}
+### Note sur le nom du cookie
+# Le cookie de session Auth.js s'appelle `authjs.session-token` en v5 beta (confirmé par
+# `Set-Cookie` sur une vraie connexion locale le 2026-08-16). Si une version ultérieure d'Auth.js
+# change ce nom, corrige les requêtes ci-dessus en conséquence.
+#
+# La connexion GitHub (`/api/auth/signin/github` puis redirection vers github.com) n'est pas
+# scriptable dans ce fichier : OAuth exige un round-trip navigateur réel (consentement GitHub),
+# il n'y a pas d'équivalent `.http` pour ça. Teste ce chemin à la main via `/login` (voir
+# `docs/alex-hub/guide-test.md`, Scénario 1).

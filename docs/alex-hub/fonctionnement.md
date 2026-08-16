@@ -42,13 +42,53 @@ fond tant que tu n'as pas la page ouverte.
 
 | Brique | Rôle | Fichier |
 |---|---|---|
-| Portier | Demande le mot de passe avant de laisser entrer | `src/lib/auth.ts`, `middleware.ts` |
+| Portier | Vérifie qui a le droit d'entrer (GitHub ou mot de passe) et gère la session | `src/lib/auth.ts`, `src/auth.ts`, `src/middleware.ts` |
 | Interprète Dokploy | Va chercher la liste des projets/services chez Dokploy | `src/lib/dokploy.ts` |
 | Enquêteur de site | Sonne à la porte de chaque site, note titre/description/favicon/statut/latence | `src/lib/metadata.ts` |
 | Chef d'orchestre | Assemble tout, regroupe par projet, garde un cache 60s | `src/lib/aggregate.ts` |
 | Filtre | Recherche texte + filtre de statut (Tous/En ligne/Hors ligne) | `src/lib/filter.ts` |
-| Guichet | Répond aux appels du navigateur (`/api/sites`, `/api/login`, `/api/logout`) | `src/app/api/*/route.ts` |
+| Guichet | Répond aux appels du navigateur (`/api/sites`, `/api/auth/*`) | `src/app/api/*/route.ts` |
 | Vitrine | Affiche tout ça à l'écran, design "Personal Brand · Cloudbreak" | `src/app/page.tsx`, `src/components/*` |
+
+## Le portier, en détail : deux façons d'entrer
+
+Le portier (Auth.js) accepte deux façons de prouver que c'est bien toi, façon "tu peux entrer
+soit avec ta carte magnétique, soit avec le digicode de secours" :
+
+```
+   Toi ouvres /login
+          |
+          +--> "Se connecter avec GitHub"
+          |         |
+          |         v
+          |    Redirection vers GitHub : "tu confirmes que c'est toi ?"
+          |         |
+          |         v
+          |    GitHub te renvoie vers Alex Hub avec ton pseudo GitHub
+          |         |
+          |         v
+          |    Le portier compare ce pseudo à ALLOWED_GITHUB_USERNAME
+          |         |
+          |         +--> pseudo autorisé  --> session créée, accès au dashboard
+          |         +--> pseudo différent --> refusé, retour à /login avec un message d'erreur
+          |              (même si GitHub, lui, t'a bien authentifié : c'est une règle
+          |              propre à Alex Hub, "un seul compte a le droit d'entrer")
+          |
+          +--> Formulaire mot de passe (solution de secours)
+                    |
+                    v
+               Comparaison avec ALEX_HUB_PASSWORD
+                    |
+                    +--> bon mot de passe --> session créée, accès au dashboard
+                    +--> mauvais mot de passe --> message d'erreur, tu restes sur /login
+```
+
+Dans les deux cas, une fois la session créée, c'est Auth.js qui la gère (cookie signé), et
+`src/middleware.ts` vérifie cette session à chaque requête pour bloquer tout ce qui n'est pas
+`/login` ou `/api/auth/*` (les routes qui servent justement à se connecter).
+
+Le mot de passe reste volontairement disponible en secours (si GitHub est indisponible, ou pour
+tester rapidement sans passer par l'OAuth).
 
 ## Fichiers impactés
 
@@ -58,10 +98,16 @@ fond tant que tu n'as pas la page ouverte.
 - `src/lib/filter.ts` — filtrage texte + filtrage par statut
 - `src/lib/format.ts` — formatage (badge de statut, host d'une url, initiale d'un titre)
 - `src/lib/aggregate.ts` — assemblage + cache 60s
-- `src/lib/auth.ts` — mot de passe + jeton de session signé
+- `src/lib/auth.ts` — vérification du mot de passe (`checkPassword`) et du pseudo GitHub
+  autorisé (`isAllowedGithubUser`), les deux seules fonctions pures et testées de l'auth
+- `src/auth.ts` — configuration Auth.js (providers GitHub + Credentials, règle de restriction
+  GitHub, page de connexion)
 - `src/lib/useTheme.ts` — thème clair/sombre (persistance + préférence système)
-- `middleware.ts` — protège toutes les routes sauf `/login` et `/api/login`
-- `src/app/api/login/route.ts`, `src/app/api/logout/route.ts`, `src/app/api/sites/route.ts`
+- `src/middleware.ts` — protège toutes les routes sauf `/login` et `/api/auth/*`, via la session
+  Auth.js (`auth()`)
+- `src/app/api/auth/[...nextauth]/route.ts` — handler Auth.js (connexion GitHub, callback OAuth,
+  connexion par mot de passe, déconnexion)
+- `src/app/api/sites/route.ts`
 - `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/login/page.tsx`
 - `src/app/globals.css` — tokens du design system (couleurs, polices, rayons, ombres, motion)
 - `src/components/Header.tsx`, `Toolbar.tsx`, `ErrorBanner.tsx`, `LoadingSkeleton.tsx`,
@@ -73,6 +119,7 @@ fond tant que tu n'as pas la page ouverte.
 - Pas d'historique de monitoring (juste l'état au moment où tu ouvres/rafraîchis la page), pas de
   polling automatique en tâche de fond.
 - Pas de liste manuelle à maintenir en parallèle de Dokploy.
-- Pas de compte utilisateur multiple — un seul mot de passe partagé.
+- Pas de compte utilisateur multiple — un seul compte GitHub autorisé, plus un mot de passe
+  partagé en secours.
 - Pas de badge "hébergeur/environnement" par groupe (pas de donnée fiable disponible : tout tourne
   sur le même VPS Dokploy).

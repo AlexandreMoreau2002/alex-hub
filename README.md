@@ -9,8 +9,18 @@ Design : système "Personal Brand · Cloudbreak" (voir `docs/superpowers/specs/`
 1. `npm install`
 2. Copier `.env.example` en `.env.local` et remplir :
    - `DOKPLOY_API_URL` / `DOKPLOY_API_TOKEN` — voir la page Notion "🖥️ Serveur OVH"
-   - `ALEX_HUB_PASSWORD` — mot de passe d'accès au hub
-   - `ALEX_HUB_SESSION_SECRET` — chaîne aléatoire longue (ex: `openssl rand -hex 32`)
+   - `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` — identifiants de la GitHub OAuth App (voir
+     ci-dessous, doit être créée manuellement avant de pouvoir tester la connexion GitHub)
+   - `AUTH_SECRET` — chaîne aléatoire longue (ex: `openssl rand -hex 32`), utilisée par Auth.js
+     pour signer les sessions
+   - `ALLOWED_GITHUB_USERNAME` — seul ce compte GitHub peut se connecter via OAuth
+   - `ALEX_HUB_PASSWORD` — mot de passe d'accès au hub (connexion de secours si GitHub n'est pas
+     utilisable)
+
+   La GitHub OAuth App doit être créée à la main sur https://github.com/settings/developers
+   avant de pouvoir tester la connexion GitHub, avec comme callback URL
+   `<domaine>/api/auth/callback/github` (ex: `http://localhost:3000/api/auth/callback/github` en
+   local).
 3. `npm run dev` → http://localhost:3000
 4. `npm run test` pour les tests unitaires
 
