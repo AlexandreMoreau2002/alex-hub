@@ -1,22 +1,27 @@
+import { useState } from 'react'
 import { hostOf, initialOf } from '@/lib/format'
 import type { SiteEntry } from '@/lib/types'
 import { StatusBadge } from './StatusBadge'
 import styles from './ServiceRow.module.css'
 
 export function ServiceRow({ site }: { site: SiteEntry }) {
+  const [faviconFailed, setFaviconFailed] = useState(false)
+  const showFallback = !site.favicon || faviconFailed
+
   return (
     <div className={styles.row}>
       <div className={styles.favicon}>
-        <span className={styles.faviconFallback}>{initialOf(site.title)}</span>
-        {site.favicon ? (
+        {/* L'initiale de secours ne doit s'afficher que sans favicon (ou si son chargement
+            échoue) — sinon elle transparaît derrière les favicons à fond transparent
+            (ex: logo en PNG avec marges transparentes). */}
+        {showFallback ? <span className={styles.faviconFallback}>{initialOf(site.title)}</span> : null}
+        {site.favicon && !faviconFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={site.favicon}
             alt=""
             className={styles.faviconImg}
-            onError={(event) => {
-              event.currentTarget.style.display = 'none'
-            }}
+            onError={() => setFaviconFailed(true)}
           />
         ) : null}
       </div>
