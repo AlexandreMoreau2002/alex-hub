@@ -34,7 +34,7 @@ it('maps projects/environments/applications into grouped services, fetching doma
   const applicationOne = {
     applicationId: 'a1',
     name: 'Front Prod',
-    domains: [{ host: 'snoroc.fr', https: true }],
+    domains: [{ host: 'snoroc.fr', https: true, path: '/' }],
   }
 
   vi.stubGlobal(
@@ -56,7 +56,7 @@ it('maps projects/environments/applications into grouped services, fetching doma
     {
       projectId: 'p1',
       name: 'Snoroc',
-      services: [{ serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] }],
+      services: [{ serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] }],
     },
   ])
 })
@@ -114,7 +114,7 @@ it('degrades a single application to no domains when its application.one call fa
         return {
           ok: true,
           status: 200,
-          json: async () => ({ applicationId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] }),
+          json: async () => ({ applicationId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] }),
         }
       }
       if (url.includes('applicationId=a2')) {
@@ -130,7 +130,7 @@ it('degrades a single application to no domains when its application.one call fa
     {
       projectId: 'p1',
       name: 'Snoroc',
-      services: [{ serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] }],
+      services: [{ serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] }],
     },
   ])
 })
@@ -155,14 +155,14 @@ it('merges applications across multiple environments of the same project', async
         return {
           ok: true,
           status: 200,
-          json: async () => ({ applicationId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] }),
+          json: async () => ({ applicationId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] }),
         }
       }
       if (url.includes('applicationId=a2')) {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ applicationId: 'a2', name: 'Front Dev', domains: [{ host: 'dev.snoroc.fr', https: true }] }),
+          json: async () => ({ applicationId: 'a2', name: 'Front Dev', domains: [{ host: 'dev.snoroc.fr', https: true, path: '/' }] }),
         }
       }
       throw new Error('unexpected url')

@@ -3,6 +3,7 @@ import type { EnvironmentLabel } from './environment'
 export interface DokployDomain {
   host: string
   https: boolean
+  path: string
 }
 
 export interface DokployService {

@@ -65,7 +65,13 @@ export async function getSites(): Promise<SitesResponse> {
         const entries = await Promise.all(
           project.services.flatMap((service) =>
             service.domains.map(async (domain) => {
-              const url = `${domain.https ? 'https' : 'http'}://${domain.host}`
+              // Dokploy stocke systématiquement un path même pour les apps sans préfixe
+              // (toujours "/"), donc on ne l'ajoute à l'URL que s'il distingue vraiment le
+              // service (ex: quest-api sur /api vs quest-web sur /) — sinon deux services
+              // partageant un host avec pour seule différence "/" produiraient une URL avec
+              // un slash final superflu, sans changer le service réellement ciblé.
+              const path = domain.path === '/' ? '' : domain.path
+              const url = `${domain.https ? 'https' : 'http'}://${domain.host}${path}`
               const metadata = await fetchSiteMetadataSafe(url)
 
               const entry: SiteEntry = {

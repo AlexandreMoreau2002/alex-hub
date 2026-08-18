@@ -26,7 +26,7 @@ it('groups services by project and merges metadata including latency', async () 
     {
       projectId: 'p1',
       name: 'Snoroc',
-      services: [{ serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] }],
+      services: [{ serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] }],
     },
   ])
   vi.mocked(fetchSiteMetadata).mockResolvedValue({
@@ -68,10 +68,10 @@ it('splits a project into separate prod/dev groups based on the domain, not the 
       projectId: 'p1',
       name: 'Snoroc',
       services: [
-        { serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] },
-        { serviceId: 'a2', name: 'Back Prod', domains: [{ host: 'api.snoroc.fr', https: true }] },
-        { serviceId: 'a3', name: 'Front Dev', domains: [{ host: 'dev.snoroc.fr', https: true }] },
-        { serviceId: 'a4', name: 'Back Dev', domains: [{ host: 'dev-api.snoroc.fr', https: true }] },
+        { serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] },
+        { serviceId: 'a2', name: 'Back Prod', domains: [{ host: 'api.snoroc.fr', https: true, path: '/' }] },
+        { serviceId: 'a3', name: 'Front Dev', domains: [{ host: 'dev.snoroc.fr', https: true, path: '/' }] },
+        { serviceId: 'a4', name: 'Back Dev', domains: [{ host: 'dev-api.snoroc.fr', https: true, path: '/' }] },
       ],
     },
   ])
@@ -99,8 +99,8 @@ it('keeps a degraded entry when a metadata fetch throws unexpectedly, without af
       projectId: 'p1',
       name: 'Snoroc',
       services: [
-        { serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true }] },
-        { serviceId: 'a2', name: 'Back Prod', domains: [{ host: 'api.snoroc.fr', https: true }] },
+        { serviceId: 'a1', name: 'Front Prod', domains: [{ host: 'snoroc.fr', https: true, path: '/' }] },
+        { serviceId: 'a2', name: 'Back Prod', domains: [{ host: 'api.snoroc.fr', https: true, path: '/' }] },
       ],
     },
   ])
@@ -135,6 +135,46 @@ it('keeps a degraded entry when a metadata fetch throws unexpectedly, without af
       environment: 'prod',
     },
   ])
+})
+
+it('builds distinct URLs for services sharing a host but exposed on different paths (Quest api/web)', async () => {
+  vi.mocked(fetchDokployProjects).mockResolvedValue([
+    {
+      projectId: 'p1',
+      name: 'Quest',
+      services: [
+        {
+          serviceId: 'a1',
+          name: 'quest-api',
+          domains: [{ host: 'quest-dev.example.io', https: true, path: '/api' }],
+        },
+        {
+          serviceId: 'a2',
+          name: 'quest-web',
+          domains: [{ host: 'quest-dev.example.io', https: true, path: '/' }],
+        },
+      ],
+    },
+  ])
+  vi.mocked(fetchSiteMetadata).mockImplementation(async (url: string) => {
+    if (url.endsWith('/api')) {
+      return { status: 'up', httpStatus: 404, latencyMs: 10, title: null, description: null, favicon: null }
+    }
+    return {
+      status: 'up',
+      httpStatus: 200,
+      latencyMs: 10,
+      title: 'Quest · Ton atlas de progression',
+      description: 'Transforme tes objectifs en quêtes explorables.',
+      favicon: null,
+    }
+  })
+
+  const result = await getSites()
+
+  const urls = result.groups[0].services.map((service) => service.url)
+  expect(urls).toEqual(['https://quest-dev.example.io/api', 'https://quest-dev.example.io'])
+  expect(new Set(urls).size).toBe(2)
 })
 
 it('omits projects that have no service with a configured domain', async () => {

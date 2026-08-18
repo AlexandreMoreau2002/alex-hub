@@ -3,6 +3,7 @@ import type { DokployProject } from './types'
 interface RawDomain {
   host: string
   https?: boolean
+  path?: string
 }
 
 interface RawApplicationSummary {
@@ -81,6 +82,7 @@ export async function fetchDokployProjects(): Promise<DokployProject[]> {
               domains: (detail.domains ?? []).map((domain) => ({
                 host: domain.host,
                 https: domain.https ?? true,
+                path: domain.path ?? '/',
               })),
             }
           } catch {
